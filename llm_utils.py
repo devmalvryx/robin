@@ -2,6 +2,7 @@ import requests
 from urllib.parse import urljoin
 from langchain_openai import ChatOpenAI
 from langchain_ollama import ChatOllama
+from langchain_core.runnables import Runnable
 from typing import Callable, Optional, List
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -48,22 +49,46 @@ _common_llm_params = {
 
 # ---- PAXSENIX CLASS ----
 
-class ChatPaxSenix:
-    def __init__(self, model_name, api_key, base_url="https://api.paxsenix.org/v1/chat/completions", **_):
+from langchain_core.runnables import Runnable
+import requests
+
+class ChatPaxSenix(Runnable):
+    def __init__(
+        self, 
+        model_name, 
+        api_key, 
+        base_url="https://api.paxsenix.org/v1/chat/completions", 
+        **_
+    ):
         self.model_name = model_name
         self.api_key = api_key
         self.base_url = base_url
 
-    def invoke(self, messages, **kwargs):
+    def invoke(self, input, **kwargs):
+        # LangChain may pass {'messages': [...]} or just a list of messages, or just a string.
+        if isinstance(input, dict) and 'messages' in input:
+            messages = input['messages']
+        elif isinstance(input, list):
+            messages = input
+        else:
+            # Fallback to treat as user prompt
+            messages = [{"role": "user", "content": str(input)}]
         payload = {"model": self.model_name, "messages": messages}
-        payload.update(kwargs)
+        # Only add recognized completion params
+        for k in ['max_tokens', 'temperature', 'top_p', 'stop']:
+            if k in kwargs:
+                payload[k] = kwargs[k]
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.api_key}"
         }
         response = requests.post(self.base_url, headers=headers, json=payload)
         response.raise_for_status()
+        # Return the plain content just as LangChain expects
         return response.json()["choices"][0]["message"]["content"]
+
+    def __call__(self, input, **kwargs):
+        return self.invoke(input, **kwargs)
 
 # ---- MODEL CONFIG MAP ----
 
