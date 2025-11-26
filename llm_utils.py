@@ -42,6 +42,24 @@ _common_llm_params = {
     "callbacks": _common_callbacks,
 }
 
+class ChatPaxSenix:
+    def __init__(self, model_name, api_key, base_url="https://api.paxsenix.org/v1/chat/completions"):
+        self.model_name = model_name
+        self.api_key = api_key
+        self.base_url = base_url
+
+    def invoke(self, messages, **kwargs):
+        payload = {"model": self.model_name, "messages": messages}
+        payload.update(kwargs)
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.api_key}"
+        }
+        response = requests.post(self.base_url, headers=headers, json=payload)
+        response.raise_for_status()
+        return response.json()["choices"][0]["message"]["content"]
+
+        
 # Map input model choices (lowercased) to their configuration
 # Each config includes the class and any model-specific constructor parameters
 _llm_config_map = {
