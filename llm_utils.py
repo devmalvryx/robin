@@ -6,8 +6,15 @@ from typing import Callable, Optional, List
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.callbacks.base import BaseCallbackHandler
-from config import OLLAMA_BASE_URL, OPENROUTER_BASE_URL, OPENROUTER_API_KEY, GOOGLE_API_KEY, PAXSENIX_API_KEY
+from config import (
+    OLLAMA_BASE_URL,
+    OPENROUTER_BASE_URL,
+    OPENROUTER_API_KEY,
+    GOOGLE_API_KEY,
+    PAXSENIX_API_KEY,
+)
 
+# ---- BUFFERED CALLBACK ----
 
 class BufferedStreamingHandler(BaseCallbackHandler):
     def __init__(self, buffer_limit: int = 60, ui_callback: Optional[Callable[[str], None]] = None):
@@ -30,20 +37,19 @@ class BufferedStreamingHandler(BaseCallbackHandler):
                 self.ui_callback(self.buffer)
             self.buffer = ""
 
+# ---- COMMON LLM PARAMS ----
 
-# --- Configuration Data ---
-# Instantiate common dependencies once
 _common_callbacks = [BufferedStreamingHandler(buffer_limit=60)]
-
-# Define common parameters for most LLMs
 _common_llm_params = {
     "temperature": 0,
     "streaming": True,
     "callbacks": _common_callbacks,
 }
 
+# ---- PAXSENIX CLASS ----
+
 class ChatPaxSenix:
-    def __init__(self, model_name, api_key, base_url="https://api.paxsenix.org/v1/chat/completions"):
+    def __init__(self, model_name, api_key, base_url="https://api.paxsenix.org/v1/chat/completions", **_):
         self.model_name = model_name
         self.api_key = api_key
         self.base_url = base_url
@@ -59,26 +65,27 @@ class ChatPaxSenix:
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
 
-        
-# Map input model choices (lowercased) to their configuration
-# Each config includes the class and any model-specific constructor parameters
+# ---- MODEL CONFIG MAP ----
+
 _llm_config_map = {
+    # OpenAI direct
     'gpt-4.1': {
         'class': ChatOpenAI,
-        'constructor_params': {'model_name': 'gpt-4.1'} 
+        'constructor_params': {'model_name': 'gpt-4.1'}
     },
     'gpt-5.1': {
         'class': ChatOpenAI,
-        'constructor_params': {'model_name': 'gpt-5.1'} 
+        'constructor_params': {'model_name': 'gpt-5.1'}
     },
     'gpt-5-mini': {
         'class': ChatOpenAI,
-        'constructor_params': {'model_name': 'gpt-5-mini'} 
+        'constructor_params': {'model_name': 'gpt-5-mini'}
     },
-    'gpt-5-nano': { 
+    'gpt-5-nano': {
         'class': ChatOpenAI,
-        'constructor_params': {'model_name': 'gpt-5-nano'} 
+        'constructor_params': {'model_name': 'gpt-5-nano'}
     },
+    # Anthropic/Claude
     'claude-sonnet-4-5': {
         'class': ChatAnthropic,
         'constructor_params': {'model': 'claude-sonnet-4-5'}
@@ -87,9 +94,10 @@ _llm_config_map = {
         'class': ChatAnthropic,
         'constructor_params': {'model': 'claude-sonnet-4-0'}
     },
+    # Google Gemini
     'gemini-2.5-flash': {
         'class': ChatGoogleGenerativeAI,
-        'constructor_params': {'model': 'gemini-2.5-flash', 'google_api_key': GOOGLE_API_KEY }
+        'constructor_params': {'model': 'gemini-2.5-flash', 'google_api_key': GOOGLE_API_KEY}
     },
     'gemini-2.5-flash-lite': {
         'class': ChatGoogleGenerativeAI,
@@ -99,12 +107,13 @@ _llm_config_map = {
         'class': ChatGoogleGenerativeAI,
         'constructor_params': {'model': 'gemini-2.5-pro', 'google_api_key': GOOGLE_API_KEY}
     },
+    # OpenRouter (OpenAI or Anthropic)
     'gpt-5.1-openrouter': {
         'class': ChatOpenAI,
         'constructor_params': {
             'model_name': 'openai/gpt-5.1',
             'base_url': OPENROUTER_BASE_URL,
-            'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
+            'api_key': OPENROUTER_API_KEY
         }
     },
     'gpt-5-mini-openrouter': {
@@ -112,7 +121,7 @@ _llm_config_map = {
         'constructor_params': {
             'model_name': 'openai/gpt-5-mini',
             'base_url': OPENROUTER_BASE_URL,
-            'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
+            'api_key': OPENROUTER_API_KEY
         }
     },
     'claude-sonnet-4.5-openrouter': {
@@ -120,7 +129,7 @@ _llm_config_map = {
         'constructor_params': {
             'model_name': 'anthropic/claude-sonnet-4.5',
             'base_url': OPENROUTER_BASE_URL,
-            'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
+            'api_key': OPENROUTER_API_KEY
         }
     },
     'grok-4.1-fast-openrouter': {
@@ -128,11 +137,10 @@ _llm_config_map = {
         'constructor_params': {
             'model_name': 'x-ai/grok-4.1-fast',
             'base_url': OPENROUTER_BASE_URL,
-            'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
+            'api_key': OPENROUTER_API_KEY
         }
     },
-    # ... existing OpenAI configs:
-    # PaxSenix configs:
+    # PaxSenix-supported models
     'gpt-4.1-paxsenix': {
         'class': ChatPaxSenix,
         'constructor_params': {'model_name': 'gpt-4.1', 'api_key': PAXSENIX_API_KEY}
@@ -145,45 +153,24 @@ _llm_config_map = {
         'class': ChatPaxSenix,
         'constructor_params': {'model_name': 'gpt-5-nano', 'api_key': PAXSENIX_API_KEY}
     },
-    # ... your other provider configs
+    # Add other providers as needed.
+    # Ollama - uncomment and extend if needed.
     # 'llama3.2': {
     #     'class': ChatOllama,
     #     'constructor_params': {'model': 'llama3.2:latest', 'base_url': OLLAMA_BASE_URL}
     # },
-    # 'llama3.1': {
-    #     'class': ChatOllama,
-    #     'constructor_params': {'model': 'llama3.1:latest', 'base_url': OLLAMA_BASE_URL}
-    # },
-    # 'gemma3': {
-    #     'class': ChatOllama,
-    #     'constructor_params': {'model': 'gemma3:latest', 'base_url': OLLAMA_BASE_URL}
-    # },
-    # 'deepseek-r1': {
-    #     'class': ChatOllama,
-    #     'constructor_params': {'model': 'deepseek-r1:latest', 'base_url': OLLAMA_BASE_URL}
-    # },
-    
-    # Add more models here easily:
-    # 'mistral7b': {
-    #     'class': ChatOllama,
-    #     'constructor_params': {'model': 'mistral:7b', 'base_url': OLLAMA_BASE_URL}
-    # },
-    # 'gpt3.5': {
-    #      'class': ChatOpenAI,
-    #      'constructor_params': {'model_name': 'gpt-3.5-turbo', 'base_url': OLLAMA_BASE_URL}
-    # }
+    # ... more models ...
 }
 
+# ---- UTILITY FUNCTIONS ----
 
 def _normalize_model_name(name: str) -> str:
     return name.strip().lower()
-
 
 def _get_ollama_base_url() -> Optional[str]:
     if not OLLAMA_BASE_URL:
         return None
     return OLLAMA_BASE_URL.rstrip("/") + "/"
-
 
 def fetch_ollama_models() -> List[str]:
     """
@@ -193,7 +180,6 @@ def fetch_ollama_models() -> List[str]:
     base_url = _get_ollama_base_url()
     if not base_url:
         return []
-
     try:
         resp = requests.get(urljoin(base_url, "api/tags"), timeout=3)
         resp.raise_for_status()
@@ -206,7 +192,6 @@ def fetch_ollama_models() -> List[str]:
         return available
     except (requests.RequestException, ValueError):
         return []
-
 
 def get_model_choices() -> List[str]:
     """
@@ -227,7 +212,6 @@ def get_model_choices() -> List[str]:
         key=_normalize_model_name,
     )
     return base_models + ordered_dynamic
-
 
 def resolve_model_config(model_choice: str):
     """
