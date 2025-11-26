@@ -52,6 +52,9 @@ _common_llm_params = {
 from langchain_core.runnables import Runnable
 import requests
 
+from langchain_core.runnables import Runnable
+import requests
+
 class ChatPaxSenix(Runnable):
     def __init__(
         self, 
@@ -64,17 +67,20 @@ class ChatPaxSenix(Runnable):
         self.api_key = api_key
         self.base_url = base_url
 
-    def invoke(self, input, **kwargs):
-        # LangChain may pass {'messages': [...]} or just a list of messages, or just a string.
+    def invoke(self, input, config=None, **kwargs):
+        """
+        Required signature for LangChain Runnable.
+        Accepts input from chains, handles both {"messages": [...]}, list of messages, or a plain string.
+        """
+        # Handle LangChain dict input, list input, or string
         if isinstance(input, dict) and 'messages' in input:
             messages = input['messages']
         elif isinstance(input, list):
             messages = input
         else:
-            # Fallback to treat as user prompt
             messages = [{"role": "user", "content": str(input)}]
         payload = {"model": self.model_name, "messages": messages}
-        # Only add recognized completion params
+        # Only include valid completion args
         for k in ['max_tokens', 'temperature', 'top_p', 'stop']:
             if k in kwargs:
                 payload[k] = kwargs[k]
@@ -84,11 +90,12 @@ class ChatPaxSenix(Runnable):
         }
         response = requests.post(self.base_url, headers=headers, json=payload)
         response.raise_for_status()
-        # Return the plain content just as LangChain expects
+        # PaxSenix returns OpenAI-style response dict
         return response.json()["choices"][0]["message"]["content"]
 
-    def __call__(self, input, **kwargs):
-        return self.invoke(input, **kwargs)
+    def __call__(self, input, config=None, **kwargs):
+        # Also allow callable-style, e.g. when run outside LCEL
+        return self.invoke(input, config, **kwargs)
 
 # ---- MODEL CONFIG MAP ----
 
