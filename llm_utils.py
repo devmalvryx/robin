@@ -131,6 +131,21 @@ _llm_config_map = {
             'api_key': OPENROUTER_API_KEY  # Use OpenRouter API key
         }
     },
+    # ... existing OpenAI configs:
+    # PaxSenix configs:
+    'gpt-4.1-paxsenix': {
+        'class': ChatPaxSenix,
+        'constructor_params': {'model_name': 'gpt-4.1', 'api_key': PAXSENIX_API_KEY}
+    },
+    'gpt-5-mini-paxsenix': {
+        'class': ChatPaxSenix,
+        'constructor_params': {'model_name': 'gpt-5-mini', 'api_key': PAXSENIX_API_KEY}
+    },
+    'gpt-5-nano-paxsenix': {
+        'class': ChatPaxSenix,
+        'constructor_params': {'model_name': 'gpt-5-nano', 'api_key': PAXSENIX_API_KEY}
+    },
+    # ... your other provider configs
     # 'llama3.2': {
     #     'class': ChatOllama,
     #     'constructor_params': {'model': 'llama3.2:latest', 'base_url': OLLAMA_BASE_URL}
